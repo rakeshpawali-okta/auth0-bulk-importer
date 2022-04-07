@@ -62,8 +62,10 @@ done
 [[ -z "${access_token}" ]] && { echo >&2 "ERROR: access_token undefined. export access_token='PASTE' "; usage 1; }
 [[ -z "${connection_id}" ]] && { echo >&2 "ERROR: connection_id undefined."; usage 1; }
 [[ -z "${input_folder}" ]] && { echo >&2 "ERROR: input_folder undefined."; usage 1; }
-
 [[ -z "${output_folder}" ]] && output_folder="${input_folder}"
+
+[[ ! -d "${input_folder}" ]] && { echo >&2 "ERROR: input is not a folder: ${input_folder}"; usage 1; }
+[[ ! -d "${output_folder}" ]] && { echo >&2 "ERROR: output is not a folder: ${output_folder}"; usage 1; }
 
 export AUTH0_DOMAIN_URL=$(echo "${access_token}" | awk -F. '{print $2}' | base64 -di 2>/dev/null | jq -r '.iss')
 
@@ -96,7 +98,7 @@ function upload() {
 
     local finished_at=$(date +%FT%T)
 
-    local output_file=$(readlink -m "${output_folder}/$(basename "${input_file}")-${status}-${job_id}")
+    local output_file=$(readlink -m "${output_folder}/$(basename "${input_file}")") # -${status}-${job_id}
 
     echo "${output_file}"
     mv "${input_file}" "${output_file}"
