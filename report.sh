@@ -38,15 +38,16 @@ readonly duration=$(echo "`date -d ${end_date} +%s` - `date -d ${start_date} +%s
 echo "Start date: ${start_date}"
 echo "End   date: ${end_date}"
 echo "Duration  : ${duration} seconds"
+echo "File count:" $(cat "${summary}" | tail -n +3 | head -n -1 | wc -l)
 
 echo -n "Total     : "
-awk -F, '(NR>2){print $6}' import-summary.csv | head -n -1  | paste -sd+ | bc
+awk -F, '(NR>2){print $6}' "${summary}" | head -n -1  | paste -sd+ | bc
 
 echo -n "Inserted  : "
-awk -F, '(NR>2){print $7}' import-summary.csv | head -n -1  | paste -sd+ | bc
+awk -F, '(NR>2){print $7}' "${summary}" | head -n -1  | paste -sd+ | bc
 
 echo -n "Updated   : "
-awk -F, '(NR>2){print $8}' import-summary.csv | head -n -1  | paste -sd+ | bc
+awk -F, '(NR>2){print $8}' "${summary}" | head -n -1  | paste -sd+ | bc
 
 echo -n "Failed    : "
-awk -F, '(NR>2){print $9}' import-summary.csv | head -n -1  | paste -sd+ | bc
+awk -F, '(NR>2){print $9}' "${summary}" | head -n -1  | paste -sd+ | bc

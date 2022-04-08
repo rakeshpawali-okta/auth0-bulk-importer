@@ -115,7 +115,7 @@ function upload() {
 
     local output_file=$(readlink -m "${output_folder}/$(basename "${input_file}")") # -${status}-${job_id}
 
-    echo $(basename "${output_file}")
+    echo "done"
     mv "${input_file}" "${output_file}"
     echo "${payload}" | jq . > "${report_folder}/${job_id}.json"
 
