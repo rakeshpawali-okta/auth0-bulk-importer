@@ -11,6 +11,7 @@ export send_completion_email=false
 export summary_file='import-summary.csv'
 
 declare -i job_max=1
+declare -i keep=''
 
 command -v awk >/dev/null       || { echo >&2 "ERROR: awk not found."; exit 3; }
 command -v jq >/dev/null        || { echo >&2 "ERROR: jq not found."; exit 3; }
@@ -33,6 +34,7 @@ USAGE: $0 [-e env] [-a access_token] [-c connection_id] [-i input-folder] [-o ou
         -n count    # number of retries on HTTP and rate-limit errors with exponential backoff. default in ${retries}
         -u          # run in upsert mode. default is false
         -S          # send completion email. default is false
+        -k          # keep source file, don't move them to output folder
         -h|?        # usage
         -v          # verbose
 
@@ -42,7 +44,7 @@ END
     exit $1
 }
 
-while getopts "e:a:i:o:c:j:s:r:n:uShv?" opt
+while getopts "e:a:i:o:c:j:s:r:n:uSkhv?" opt
 do
     case ${opt} in
         e) source "${OPTARG}";;
@@ -56,6 +58,7 @@ do
         n) retries=${OPTARG};;
         u) upsert=true;;
         S) send_completion_email=true;;
+        k) keep='true';;
         v) set -x;;
         h|?) usage 0;;
         *) usage 1;;
@@ -63,7 +66,7 @@ do
 done
 
 [[ -z "${output_folder}" ]] && output_folder="${input_folder}"
-[[ -z "${report_folder}" ]] && report_folder="${input_folder}"
+[[ -z "${report_folder}" ]] && report_folder="${output_folder}"
 
 [[ -z "${access_token}" ]] && { echo >&2 "ERROR: access_token undefined. export access_token='PASTE' "; usage 1; }
 [[ -z "${connection_id}" ]] && { echo >&2 "ERROR: connection_id undefined."; usage 1; }
@@ -80,10 +83,10 @@ mkdir -p "${report_folder}"
 export AUTH0_DOMAIN_URL=$(echo "${access_token}" | awk -F. '{print $2}' | base64 -di 2>/dev/null | jq -r '.iss')
 
 function upload() {
-    local input_file=$(readlink -m "${1}")
+    local -r input_file=$(readlink -m "${1}")
 
     echo -n $(basename "${input_file}")
-    local job_id=$(curl -s -H "Authorization: Bearer ${access_token}" \
+    local -r job_id=$(curl -s -H "Authorization: Bearer ${access_token}" --trace-ascii trace-multipart-curl.txt \
       -F users=@"${input_file}" \
       -F connection_id="${connection_id}" \
       -F upsert=${upsert} \
@@ -96,7 +99,7 @@ function upload() {
       return
     fi
 
-    local submitted_at=$(date +%FT%T)
+    local -r submitted_at=$(date +%FT%T)
     echo -n " (${job_id}) => "
     local status='pending'
     if [[ "${job_id}" == "null" ]]; then
@@ -111,12 +114,12 @@ function upload() {
       sleep 1
     done
 
-    local finished_at=$(date +%FT%T)
+    local -r finished_at=$(date +%FT%T)
 
-    local output_file=$(readlink -m "${output_folder}/$(basename "${input_file}")") # -${status}-${job_id}
+    local -r output_file=$(readlink -m "${output_folder}/$(basename "${input_file}")") # -${status}-${job_id}
 
     echo "done"
-    mv "${input_file}" "${output_file}"
+    [[ -z "${keep}" ]] || mv "${input_file}" "${output_file}"
     echo "${payload}" | jq . > "${report_folder}/${job_id}.json"
 
     printf "%s,%s,%s,%s,%s,%s\n" $(basename "${input_file}") "${job_id}" "${submitted_at}" "${finished_at}" "${status}" \
