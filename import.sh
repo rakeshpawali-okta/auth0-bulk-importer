@@ -86,7 +86,7 @@ function upload() {
     local -r input_file=$(readlink -m "${1}")
 
     echo -n $(basename "${input_file}")
-    local -r job_id=$(curl -s -H "Authorization: Bearer ${access_token}" --trace-ascii trace-multipart-curl.txt \
+    local -r job_id=$(curl -s -H "Authorization: Bearer ${access_token}" \
       -F users=@"${input_file}" \
       -F connection_id="${connection_id}" \
       -F upsert=${upsert} \
