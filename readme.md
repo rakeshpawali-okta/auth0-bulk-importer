@@ -1,6 +1,5 @@
 # Auth0 Bulk Importer
-This is a single command line that uploads JSON files as import jobs to Auth0 and 
-moves them to target folder was job is completed.
+This is a single command line that uploads JSON files as import jobs to Auth0 and moves them to target folder once job is completed.
 
 
 ## Requirement and Dependencies
