@@ -37,7 +37,17 @@ done
 [[ -z "${access_token}" ]] && { echo >&2 "ERROR: access_token undefined. export access_token='PASTE' "; usage 1; }
 [[ -z "${job_id}" ]] && { echo >&2 "ERROR: job_id undefined."; usage 1; }
 
-declare -r AUTH0_DOMAIN_URL=$(echo "${access_token}" | awk -F. '{print $2}' | base64 -di 2>/dev/null | jq -r '.iss')
+#declare -r AUTH0_DOMAIN_URL=$(echo "${access_token}" | awk -F. '{print $2}' | base64 -di 2>/dev/null | jq -r '.iss')
+
+declare -r AUTH0_DOMAIN_URL=$(
+  payload=$(echo "${access_token}" | awk -F. '{print $2}' | tr '_-' '+/')
+  while [[ $((${#payload} % 4)) -ne 0 ]]; do
+    payload="${payload}="
+  done
+  echo "${payload}" | base64 -d 2>/dev/null | jq -r '.iss'
+)
+
+echo "################## $AUTH0_DOMAIN_URL"
 
 curl -s -H "Authorization: Bearer ${access_token}" \
     --url "${AUTH0_DOMAIN_URL}api/v2/jobs/${job_id}${uri}" | jq .

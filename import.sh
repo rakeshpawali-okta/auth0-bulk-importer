@@ -80,10 +80,21 @@ mkdir -p "${report_folder}"
 [[ ! -d "${output_folder}" ]] && { echo >&2 "ERROR: output is not a folder: ${output_folder}"; usage 1; }
 [[ ! -d "${report_folder}" ]] && { echo >&2 "ERROR: report is not a folder: ${report_folder}"; usage 1; }
 
-export AUTH0_DOMAIN_URL=$(echo "${access_token}" | awk -F. '{print $2}' | base64 -di 2>/dev/null | jq -r '.iss')
+#export AUTH0_DOMAIN_URL=$(echo "${access_token}" | awk -F. '{print $2}' | base64 -di 2>/dev/null | jq -r '.iss')
+#export AUTH0_DOMAIN_URL=$(echo "${access_token}" | awk -F. '{print $2}' | tr '_-' '+/' | base64 -D 2>/dev/null | jq -r '.iss')
+
+export AUTH0_DOMAIN_URL=$(
+  payload=$(echo "${access_token}" | awk -F. '{print $2}' | tr '_-' '+/')
+  while [[ $((${#payload} % 4)) -ne 0 ]]; do
+    payload="${payload}="
+  done
+  echo "${payload}" | base64 -d 2>/dev/null | jq -r '.iss'
+)
+
 
 function upload() {
-    local -r input_file=$(readlink -m "${1}")
+    #local -r input_file=$(readlink -m "${1}")
+    local -r input_file="$(cd "$(dirname "${1}")"; pwd -P)/$(basename "${1}")"
 
     echo -n $(basename "${input_file}")
     local -r job_id=$(curl -s -H "Authorization: Bearer ${access_token}" \
@@ -116,7 +127,8 @@ function upload() {
 
     local -r finished_at=$(date +%FT%T)
 
-    local -r output_file=$(readlink -m "${output_folder}/$(basename "${input_file}")") # -${status}-${job_id}
+    #local -r output_file=$(readlink -m "${output_folder}/$(basename "${input_file}")") # -${status}-${job_id}
+    local -r output_file="$(cd "${output_folder}"; pwd -P)/$(basename "${input_file}")"
 
     echo "done"
     [[ -z "${keep}" ]] || mv "${input_file}" "${output_file}"
